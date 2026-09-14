@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-navy: #173D6E;
+  --color-navy-dark: #1B3669;
+  --color-navy-deeper: #131739;
+  --color-navy-light: #27548F;
+  --color-navy-mid: #1A2842;
+  --color-blue-soft: #81A1DB;
+  --color-blue-pale: #C9DCFF;
+  --color-blue-lighter: #CFE0FF;
+  --color-lavender: #f7f0ff;
+  --color-gold: #EBC302;
+  --color-gold-dark: #c9a700;
+  --color-purple: #800080;
+  --color-magenta: #A90072;
+  --color-ink: #140E0C;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #080f1a;
+  color: white;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 { font-family: 'Outfit', sans-serif; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #080f1a; }
+::-webkit-scrollbar-thumb { background: #27548F; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #81A1DB; }
+
+/* ── NAV BLUR ── */
+.nav-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ── GOLD GLOW BUTTON ── */
+.gold-glow {
+  box-shadow: 0 0 24px rgba(235,195,2,0.4), 0 4px 16px rgba(235,195,2,0.2);
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+.gold-glow:hover {
+  box-shadow: 0 0 40px rgba(235,195,2,0.6), 0 8px 24px rgba(235,195,2,0.3);
+  transform: translateY(-2px);
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  background: linear-gradient(90deg, #EBC302, #1B65A6);
+}
+
+/* ── FLOAT ANIMATIONS ── */
+@keyframes float-a {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(0.5deg); }
+}
+@keyframes float-b {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-7px); }
+}
+@keyframes float-c {
+  0%, 100% { transform: translateY(0px); }
+  33% { transform: translateY(-5px); }
+  66% { transform: translateY(3px); }
+}
+.float-a { animation: float-a 4s ease-in-out infinite; }
+.float-b { animation: float-b 3.2s ease-in-out infinite 0.6s; }
+.float-c { animation: float-c 5s ease-in-out infinite 1.2s; }
+
+/* ── FADE IN UP ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 0.45s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+/* ── TICKER ── */
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ── PULSE RING (live) ── */
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.live-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+/* ── SHIMMER (course card hover) ── */
+@keyframes shimmer {
+  from { transform: translateX(-100%) skewX(-15deg); }
+  to { transform: translateX(200%) skewX(-15deg); }
+}
+.shimmer-card {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  transform: translateX(-100%) skewX(-15deg);
+  pointer-events: none;
+  transition: none;
+}
+.shimmer-card:hover::after {
+  animation: shimmer 0.7s ease forwards;
+}
+
+/* ── HERO GLASS CARD ── */
+.glass-card {
+  background: rgba(27, 54, 105, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.35s ease,
+              border-color 0.35s ease;
+}
+.glass-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4), 0 0 0 1px rgba(235,195,2,0.2);
+  border-color: rgba(235,195,2,0.3);
+}
+
+/* ── COURSE CARD ── */
+.course-card {
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+.course-card:hover {
+  transform: translateY(-6px);
+}
+.course-card.accessible:hover {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(235,195,2,0.35), 0 0 30px rgba(235,195,2,0.08);
+  border-color: rgba(235,195,2,0.5) !important;
+}
+.course-card.locked:hover {
+  box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+  border-color: rgba(255,255,255,0.15) !important;
+}
+
+/* Card image zoom */
+.course-card .card-img {
+  transition: transform 0.5s cubic-bezier(0.22,1,0.36,1), filter 0.3s ease;
+}
+.course-card:hover .card-img {
+  transform: scale(1.07);
+}
+.course-card.accessible:hover .card-img {
+  filter: brightness(0.85);
+}
+
+/* CTA button reveal on hover */
+.course-card .cta-btn {
+  transition: background 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+}
+.course-card:hover .cta-btn {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(235,195,2,0.35);
+}
+
+/* ── PATH CARD ── */
+.path-card {
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+.path-card:hover {
+  transform: translateY(-8px) scale(1.01);
+  box-shadow: 0 28px 56px rgba(0,0,0,0.45);
+  border-color: rgba(255,255,255,0.22) !important;
+}
+.path-card .path-orb {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.path-card:hover .path-orb {
+  opacity: 0.25;
+  transform: scale(1.3);
+}
+
+/* ── LIVE CARD ── */
+.live-card {
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+.live-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(239,68,68,0.3);
+  border-color: rgba(239,68,68,0.3) !important;
+}
+
+/* ── INSTRUCTOR CARD ── */
+.instructor-card {
+  transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+.instructor-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(129,161,219,0.3);
+  border-color: rgba(129,161,219,0.3) !important;
+}
+.instructor-card .inst-avatar {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.instructor-card:hover .inst-avatar {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 3px rgba(235,195,2,0.5);
+}
+
+/* ── NAV LINK UNDERLINE ── */
+.nav-link {
+  position: relative;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: #EBC302;
+  transition: width 0.25s ease;
+}
+.nav-link:hover::after { width: 100%; }
+
+/* ── CATEGORY PILL ── */
+.cat-pill {
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.cat-pill:hover:not(.active) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.cat-pill.active {
+  box-shadow: 0 4px 16px rgba(235,195,2,0.3);
+}
+
+/* ── SEARCH BAR ── */
+.search-input {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.search-input:focus {
+  box-shadow: 0 0 0 3px rgba(235,195,2,0.15), 0 4px 16px rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.1) !important;
+}
+
+/* ── GLOW ORBS ── */
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(30px,-20px) scale(1.1); }
+  66% { transform: translate(-15px,25px) scale(0.95); }
+}
+.orb { animation: orb-drift 12s ease-in-out infinite; }
+.orb-2 { animation: orb-drift 16s ease-in-out infinite reverse 4s; }
+
+/* ── BENEFIT CARD ── */
+.benefit-card {
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+.benefit-card:hover {
+  background: rgba(255,255,255,0.1) !important;
+  border-color: rgba(255,255,255,0.2) !important;
+  transform: translateY(-3px);
+}
+
+/* ── FOOTER LINK ── */
+.footer-link {
+  transition: color 0.2s ease, transform 0.2s ease;
+  display: inline-block;
+}
+.footer-link:hover {
+  color: rgba(255,255,255,0.75) !important;
+  transform: translateX(3px);
+}
