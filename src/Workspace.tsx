@@ -1,0 +1,53 @@
+import { useState } from 'react';
+import { api, type Certificate, type Course, type LiveEvent, type User } from './api';
+import { AcademyHeader, useAcademy } from './AcademyContext';
+import { Empty, PageTitle, Progress, ResourceState, useResource } from './ui';
+import CoursePlayer from './CoursePlayer';
+import AdminPanel from './AdminPanel';
+import { MAX_AVATAR_BYTES } from '../shared/upload-limits.js';
+
+export default function Workspace() {
+  const { view, user, loading, openLogin, courseId, authMode } = useAcademy();
+  return <div className="academy-shell"><AcademyHeader /><main className="academy-main">
+    {authMode === 'local' && <div className="academy-test-notice">Tu progreso se guarda automáticamente en CooviAcademy.</div>}
+    {loading ? <Empty title="Comprobando tu sesión…" /> : !user && view !== 'calendar' ? <Empty title="Tu aprendizaje comienza aquí"><p>Inicia sesión para ver tus cursos, notas y progreso.</p><button className="academy-primary" onClick={openLogin}>Iniciar sesión</button></Empty> : <>
+      {view === 'dashboard' && <Dashboard />}
+      {view === 'learn' && (courseId ? <CoursePlayer key={courseId} courseId={courseId} /> : <Empty title="Selecciona un curso desde el catálogo" />)}
+      {view === 'calendar' && <EventsPage />}
+      {view === 'profile' && <Profile />}
+      {view === 'admin' && (user?.role === 'admin' || user?.role === 'teacher' ? <AdminPanel teacherMode={user.role === 'teacher'} /> : <Empty title="Esta sección es para administradores o profesores" />)}
+    </>}
+  </main></div>;
+}
+function Dashboard() {
+  const { user, navigate, startCourse } = useAcademy(); const resource = useResource<{ courses: Course[]; certificates: Certificate[] }>('/dashboard');
+  const [filter, setFilter] = useState('all'); const courses = resource.data?.courses || [];
+  const finished = (course: Course) => course.lessons > 0 && course.completed === course.lessons;
+  const visible = courses.filter(course => filter === 'all' || (filter === 'done' ? finished(course) : !finished(course)));
+  return <><PageTitle label="MI APRENDIZAJE" title={'Hola, ' + (user?.name.split(' ')[0] || '') + '.'}><button className="academy-primary" onClick={() => navigate('home')}>Explorar cursos ↗</button></PageTitle><ResourceState loading={resource.loading} error={resource.error} retry={resource.reload} />{resource.data && <>
+    <div className="academy-stats"><div><span>Cursos inscritos</span><strong>{courses.length}</strong></div><div><span>Lecciones completadas</span><strong>{courses.reduce((sum, course) => sum + (course.completed || 0), 0)}</strong></div><div><span>Constancias</span><strong>{resource.data.certificates.length}</strong></div></div>
+    <div className="academy-section-head"><h2>Mis cursos</h2><div className="academy-tabs" aria-label="Filtrar cursos">{[['all','Todos'],['progress','En progreso'],['done','Completados']].map(([key,label]) => <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>{label}</button>)}</div></div>
+    {!visible.length && <Empty title={courses.length ? 'No hay cursos en este grupo' : 'Elige tu primer curso'}><p>Los cursos que inicies aparecerán aquí con tu avance.</p><button className="academy-secondary" onClick={() => navigate('home')}>Ir al catálogo</button></Empty>}
+    <div className="academy-course-grid">{visible.map(course => <article className="academy-learning-card" key={course.id}><div className="academy-course-art"><img src={course.image} alt="" onError={event => { event.currentTarget.style.visibility = 'hidden'; }} /><span>{course.category}</span></div><div className="academy-learning-body"><h3>{course.title}</h3><p className="academy-muted">{course.instructor}</p><Progress completed={course.completed || 0} total={course.lessons} /><button className="academy-primary" onClick={() => startCourse(course)}>{finished(course) ? 'Repasar el curso' : 'Continuar aprendiendo'} →</button></div></article>)}</div>
+    <section className="academy-certificates"><h2>Mis constancias</h2>{resource.data.certificates.length ? resource.data.certificates.map(cert => <div className="academy-list-row" key={cert.id}><div><strong>{cert.title}</strong><p className="academy-muted">Emitida el {new Date(cert.issued_at).toLocaleDateString('es-CO')}</p></div><a className="academy-secondary" href={'/api/certificates/' + cert.id} target="_blank" rel="noopener noreferrer">Abrir y guardar PDF ↗</a></div>) : <p className="academy-muted">Completa las lecciones de un curso para obtener una constancia de participación.</p>}</section>
+  </>}</>;
+}
+export function EventsPage({ compact = false }: { compact?: boolean }) {
+  const { user, openLogin, notify } = useAcademy(); const resource = useResource<LiveEvent[]>('/events'); const [busyId, setBusyId] = useState<number | null>(null);
+  return <><PageTitle label="APRENDE EN COMUNIDAD" title={compact ? 'Próximas sesiones' : 'Sesiones en vivo'}><a className="academy-secondary" href="/api/events/calendar">Descargar calendario</a></PageTitle><ResourceState loading={resource.loading} error={resource.error} retry={resource.reload} />{resource.data?.length === 0 && <Empty title="Aún no hay sesiones programadas"><p>Las próximas actividades aparecerán aquí.</p></Empty>}<div className="academy-events-grid">{resource.data?.map(event => {
+    const passed = Date.parse(event.starts_at) < Date.now(); const available = event.capacity - (event.attendees || 0);
+    return <article className="academy-panel academy-event" key={event.id}><div className="academy-event-date"><strong>{new Date(event.starts_at).toLocaleDateString('es-CO',{day:'2-digit'})}</strong><span>{new Date(event.starts_at).toLocaleDateString('es-CO',{month:'short'})}</span></div><div className="academy-event-info"><p className="academy-eyebrow">{event.category} · {passed ? 'Sesión iniciada' : 'Próxima sesión'}</p><h3>{event.title}</h3><p className="academy-muted">{event.instructor}</p><p>{new Date(event.starts_at).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'})}</p><p className="academy-muted">{event.attendees || 0} inscritos · {available} cupos libres</p>
+      <div className="academy-actions">{event.reserved ? <><span className="academy-badge">✓ Tu lugar está reservado</span><button disabled={busyId === event.id} className="academy-text-button" onClick={async () => { setBusyId(event.id); try { await api('/events/' + event.id + '/reserve','DELETE'); resource.reload(); } catch (error) { notify((error as Error).message); } finally { setBusyId(null); } }}>Cancelar reserva</button></> : <button className="academy-primary" disabled={busyId === event.id || passed || available <= 0} onClick={async () => { if (!user) { openLogin(); return; } setBusyId(event.id); try { await api('/events/' + event.id + '/reserve','POST',{}); resource.reload(); notify('Tu reserva quedó guardada.'); } catch (error) { notify((error as Error).message); } finally { setBusyId(null); } }}>{passed ? 'Sesión iniciada' : available <= 0 ? 'Sin cupos' : 'Reservar mi lugar'}</button>}</div>
+      {event.meeting_url && event.reserved && <a className="academy-resource" href={event.meeting_url} target="_blank" rel="noopener noreferrer">Entrar a la sesión ↗</a>}
+      {event.reserved && !event.meeting_url && <p className="academy-muted">El enlace aparecerá aquí cuando el organizador lo publique.</p>}
+    </div></article>;
+  })}</div></>;
+}
+function Profile() {
+  const { user, authMode, updateUser, notify } = useAcademy(); const [busy, setBusy] = useState(false), [photoBusy, setPhotoBusy] = useState(false); const [showCurrent, setShowCurrent] = useState(false), [showNew, setShowNew] = useState(false);
+  const roleLabel = user?.role === 'admin' ? 'Administrador' : user?.role === 'teacher' ? 'Profesor' : 'Estudiante';
+  return <><PageTitle label="MI CUENTA" title="Tu perfil" /><section className="academy-panel academy-profile">{user?.avatar_url ? <img className="academy-profile-avatar academy-profile-avatar-image" src={user.avatar_url} alt="" /> : <div className="academy-profile-avatar">{user?.name[0]}</div>}<h2>{user?.name}</h2><p className="academy-muted">{user?.email} · {roleLabel}</p>{user?.role==='teacher'&&<label className="academy-photo-upload">Foto de profesor<input type="file" accept="image/png,image/jpeg,image/webp" disabled={photoBusy} onChange={async event=>{const file=event.currentTarget.files?.[0];if(!file)return;if(file.size>MAX_AVATAR_BYTES){notify('La foto supera 5 MB.');return;}setPhotoBusy(true);try{const response=await fetch('/api/profile/avatar',{method:'POST',credentials:'same-origin',headers:{'Content-Type':file.type,'X-File-Name':file.name},body:file});const result=await response.json();if(!response.ok)throw Error(result.error);updateUser(result.user);notify('Foto de profesor actualizada.');event.currentTarget.value='';}catch(error){notify((error as Error).message);}finally{setPhotoBusy(false);}}}/>{photoBusy&&<small>Subiendo foto…</small>}</label>}{authMode === 'local' ? <form className="academy-form" onSubmit={async event => { event.preventDefault(); const form = event.currentTarget, data = new FormData(form); setBusy(true); try { const result = await api<{user:User}>('/profile','PATCH',{name:data.get('name'),currentPassword:data.get('currentPassword'),newPassword:data.get('newPassword')}); updateUser(result.user); notify('Perfil actualizado.'); } catch (error) { notify((error as Error).message); } finally { setBusy(false); } }}>
+    <label>Nombre completo<input required name="name" minLength={2} maxLength={100} defaultValue={user?.name} /></label><fieldset><legend>Cambiar contraseña (opcional)</legend><label>Contraseña actual<div className="academy-password-field"><input type={showCurrent?'text':'password'} name="currentPassword" autoComplete="current-password" maxLength={256}/><button type="button" className="academy-password-toggle" onClick={()=>setShowCurrent(value=>!value)}>{showCurrent?'Ocultar':'Ver'}</button></div></label><label>Nueva contraseña<div className="academy-password-field"><input type={showNew?'text':'password'} name="newPassword" autoComplete="new-password" minLength={12} maxLength={128}/><button type="button" className="academy-password-toggle" onClick={()=>setShowNew(value=>!value)}>{showNew?'Ocultar':'Ver'}</button></div></label><p className="academy-muted">Al cambiarla se cerrarán tus otras sesiones.</p></fieldset><button className="academy-primary" disabled={busy}>{busy?'Guardando…':'Guardar cambios'}</button>
+  </form> : <a className="academy-primary" href="https://coovitel.coop/" target="_blank" rel="noopener noreferrer">Actualizar datos en Coovitel ↗</a>}</section></>;
+}
+

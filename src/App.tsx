@@ -1,56 +1,21 @@
 import { useEffect, useState } from "react";
 import logoCoovitel from "./assets/logo-coovitel.png";
-import { api, type User } from "./api";
+import AcademyLogo from "./AcademyLogo";
+import HomeHero from "./HomeHero";
+import { useAcademy } from "./AcademyContext";
+import Workspace, { EventsPage } from "./Workspace";
+import type { Instructor, LearningPath } from './api';
+import pathDefinitions from '../shared/paths.json';
+import { COURSES as INITIAL_COURSES } from './courses';
 
 /* ─── DATA ─────────────────────────────────────────────────── */
 
-import { COURSES as INITIAL_COURSES } from "./courses";
-type Course = typeof INITIAL_COURSES[number];
+type Course = typeof INITIAL_COURSES[number] & { top?: boolean };
 
 
 const CATEGORIES = ["Todos", "Ahorro", "Inversión", "Crédito", "Planificación", "Bienestar"];
 
-const LEARNING_PATHS = [
-  {
-    id: 1, title: "Ruta del Ahorrador", color: "#27548F",
-    accent: "#81A1DB", icon: "💰",
-    description: "Desde tus primeros pesos ahorrados hasta un fondo de emergencia robusto.",
-    courses: ["Fundamentos del Ahorro Inteligente", "Fondo de Emergencia: Tu Red de Seguridad"],
-    duration: "7h 15min", level: "Principiante",
-  },
-  {
-    id: 2, title: "Ruta del Inversor", color: "#1B3669",
-    accent: "#EBC302", icon: "📈",
-    description: "Aprende a invertir con cabeza y construir un portafolio equilibrado.",
-    courses: ["Inversión Cooperativa: Tu Dinero Trabaja", "Portafolio Diversificado para Asociados"],
-    duration: "11h 35min", level: "Intermedio",
-  },
-  {
-    id: 3, title: "Ruta del Planificador", color: "#131739",
-    accent: "#A90072", icon: "🗺️",
-    description: "De las finanzas del presente a la seguridad del futuro, paso a paso.",
-    courses: ["Plan Financiero Personal en 90 Días", "Retiro Digno: Planea desde Hoy"],
-    duration: "14h 30min", level: "Avanzado",
-  },
-];
-
-const LIVE_SESSIONS = [
-  {
-    id: 1, title: "Webinar: Crédito de Vivienda para Asociados",
-    date: "18 sep 2026", time: "6:00 PM", instructor: "Mg. Claudia Ríos",
-    attendees: 142, max: 200, category: "Crédito",
-  },
-  {
-    id: 2, title: "Taller en vivo: Presupuesto Familiar Efectivo",
-    date: "25 sep 2026", time: "5:30 PM", instructor: "Dra. Marcela Torres",
-    attendees: 89, max: 150, category: "Ahorro",
-  },
-  {
-    id: 3, title: "Masterclass: Portafolio en tiempos de inflación",
-    date: "2 oct 2026", time: "7:00 PM", instructor: "Dr. Felipe Arango",
-    attendees: 201, max: 250, category: "Inversión",
-  },
-];
+const PATH_DEFINITIONS = pathDefinitions.map(path => ({ ...path, courses: path.courseIds.map(id => INITIAL_COURSES.find(course => course.id === id)).filter((course): course is Course => Boolean(course)) }));
 
 const INSTRUCTORS = [
   {
@@ -79,21 +44,17 @@ const INSTRUCTORS = [
   },
 ];
 
-const TICKER_ITEMS = [
-  "✦ 17.000+ asociados activos",
-  "✦ 64 años de confianza",
-  "✦ Calificación A+ Value & Risk",
-  "✦ 9 ciudades en Colombia",
-  "✦ Cooperativa Empresarial de Ahorro y Crédito",
-  "✦ Cursos avalados por expertos certificados",
-];
-
 const LEVEL_COLORS: Record<string, string> = {
   "Básico": "bg-emerald-500/20 text-emerald-300",
   "Intermedio": "bg-blue-500/20 text-blue-300",
   "Avanzado": "bg-purple-500/20 text-purple-300",
   "Principiante": "bg-emerald-500/20 text-emerald-300",
 };
+type LearningPathView = Omit<LearningPath, 'courses'> & { courses: Course[] };
+const INITIAL_PATHS: LearningPathView[] = PATH_DEFINITIONS.map(path => ({
+  ...path,
+  courses: path.courseIds.map(id => INITIAL_COURSES.find(course => course.id === id)).filter((course): course is Course => Boolean(course)),
+}));
 
 /* ─── TINY COMPONENTS ───────────────────────────────────────── */
 
@@ -120,8 +81,8 @@ function LockIcon({ size = 5 }: { size?: number }) {
 
 /* ─── COURSE CARD ───────────────────────────────────────────── */
 
-function CourseCard({ course, isMember, onPreview }: {
-  course: Course; isMember: boolean; onPreview: (c: Course) => void;
+function CourseCard({ course, isMember, onPreview, topRank }: {
+  course: Course; isMember: boolean; onPreview: (c: Course) => void; topRank?: number;
 }) {
   const accessible = isMember || course.free;
   return (
@@ -148,6 +109,7 @@ function CourseCard({ course, isMember, onPreview }: {
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${LEVEL_COLORS[course.level]}`}>{course.level}</span>
           {course.new && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#A90072]/80 text-white">Nuevo</span>}
         </div>
+        {topRank && <span className="academy-card-top" title={`Puesto ${topRank} entre los cursos con más inscritos`}>★ Top {topRank} · Más inscritos</span>}
         {course.free && (
           <div className="absolute top-3 right-3">
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#EBC302] text-[#140E0C]">Gratis</span>
@@ -178,7 +140,7 @@ function CourseCard({ course, isMember, onPreview }: {
         </div>
 
         {accessible ? (
-          <button className="cta-btn w-full py-2.5 rounded-xl bg-[#EBC302] text-[#140E0C] font-bold text-sm hover:bg-yellow-300">
+          <button onClick={event => { event.stopPropagation(); onPreview(course); }} className="cta-btn w-full py-2.5 rounded-xl bg-[#EBC302] text-[#140E0C] font-bold text-sm hover:bg-yellow-300">
             Comenzar →
           </button>
         ) : (
@@ -194,8 +156,8 @@ function CourseCard({ course, isMember, onPreview }: {
 
 /* ─── MODAL ─────────────────────────────────────────────────── */
 
-function Modal({ course, isMember, onClose, onJoin }: {
-  course: Course; isMember: boolean; onClose: () => void; onJoin: () => void;
+function Modal({ course, isMember, onClose, onJoin, onStart }: {
+  course: Course; isMember: boolean; onClose: () => void; onJoin: () => void; onStart: () => void;
 }) {
   const ok = isMember || course.free;
   return (
@@ -254,21 +216,10 @@ function Modal({ course, isMember, onClose, onJoin }: {
             </div>
           </div>
 
-          {ok ? (
-            <button disabled title="El ZIP no incluye videos ni lecciones" className="w-full py-3 rounded-xl bg-[#EBC302] text-[#140E0C] font-bold text-base hover:bg-yellow-300 transition-colors">
-              Este curso aún no tiene lecciones publicadas
-            </button>
-          ) : (
-            <div className="space-y-3">
-              <div className="rounded-xl border border-[#EBC302]/30 bg-[#EBC302]/8 p-4 text-center">
-                <p className="text-[#EBC302] font-semibold text-sm mb-1">Exclusivo para asociados de Coovitel</p>
-                <p className="text-white/45 text-xs">Asóciate y accede a todos los cursos sin costo adicional</p>
-              </div>
-              <button onClick={onJoin} className="w-full py-3 rounded-xl bg-[#EBC302] text-[#140E0C] font-bold text-base hover:bg-yellow-300 transition-colors">
-                Asóciate y accede →
-              </button>
-            </div>
-          )}
+          <div className="space-y-3">
+            <button onClick={onStart} className="w-full py-3 rounded-xl bg-[#EBC302] text-[#140E0C] font-bold text-base hover:bg-yellow-300">{isMember ? 'Entrar al aula →' : 'Iniciar sesión y comenzar →'}</button>
+            {!isMember && <button onClick={onJoin} className="w-full text-sm text-white/65 py-2">¿Aún no eres asociado? Asóciate a Coovitel ↗</button>}
+          </div>
         </div>
       </div>
     </div>
@@ -278,54 +229,75 @@ function Modal({ course, isMember, onClose, onJoin }: {
 /* ─── APP ───────────────────────────────────────────────────── */
 
 export default function App() {
+  const { user, view, openLogin, logout, navigate, startCourse } = useAcademy();
   const [COURSES, setCourses] = useState(INITIAL_COURSES);
-  const [user, setUser] = useState<User | null>(null);
-  const [loginOpen, setLoginOpen] = useState(false);
-  const [loginError, setLoginError] = useState("");
-  const [joinOpen, setJoinOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [instructors, setInstructors] = useState<Instructor[]>(INSTRUCTORS);
+  const [enrollmentsLoaded, setEnrollmentsLoaded] = useState(false);
+  const [courseProgress, setCourseProgress] = useState<Record<number, { completed: number; lessons: number }>>({});
+  const [dashboardCertificates, setDashboardCertificates] = useState(0);
+  const [learningPaths, setLearningPaths] = useState<LearningPathView[]>(INITIAL_PATHS);
+
+
+
+
+
+
   useEffect(() => {
+    if (view !== "home") return;
     const controller = new AbortController();
-    fetch('/api/courses', { signal: controller.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(setCourses).catch(() => {});
+    fetch('/api/courses', { signal: controller.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { setCourses(data); setEnrollmentsLoaded(true); }).catch(() => {});
     return () => controller.abort();
-  }, []);
+  }, [user, view]);
+  useEffect(() => {
+    if (view !== 'home') return;
+    const controller = new AbortController();
+    fetch('/api/paths', { signal: controller.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { if (Array.isArray(data) && data.length) setLearningPaths(data); }).catch(() => {});
+    return () => controller.abort();
+  }, [view]);
+  useEffect(() => {
+    if (view !== 'home' || !user) { setCourseProgress({}); setDashboardCertificates(0); return; }
+    const controller = new AbortController();
+    fetch('/api/dashboard', { signal: controller.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => {
+      const progress: Record<number, { completed: number; lessons: number }> = {};
+      for (const course of data.courses || []) progress[course.id] = { completed: Number(course.completed || 0), lessons: Number(course.lessons || 0) };
+      setCourseProgress(progress);
+      setDashboardCertificates(Array.isArray(data.certificates) ? data.certificates.length : 0);
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [user, view]);
+  useEffect(() => {
+    if (view !== 'home') return;
+    const controller = new AbortController();
+    fetch('/api/instructors', { signal: controller.signal }).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { if (Array.isArray(data) && data.length) setInstructors(data); }).catch(() => {});
+    return () => controller.abort();
+  }, [view]);
   const isMember = Boolean(user);
   const [activeCategory, setActiveCategory] = useState("Todos");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [toast, setToast] = useState("");
+
   const [search, setSearch] = useState("");
 
-  const showToast = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3500);
-  };
-
   const handleJoin = () => { window.open("https://coovitel.coop/", "_blank", "noopener,noreferrer"); };
-  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); setLoginError("");
-    const data = new FormData(event.currentTarget);
-    try { const result = await api<{ user: User }>("/auth/login", "POST", { username: data.get("username"), password: data.get("password") }); setUser(result.user); setLoginOpen(false); showToast("Sesión iniciada. Todos los cursos están habilitados."); }
-    catch (error) { setLoginError(error instanceof Error ? error.message : "No se pudo iniciar sesión."); }
-  };
-
   const filtered = COURSES.filter(c => {
     const catOk = activeCategory === "Todos" || c.category === activeCategory;
     const searchOk = !search || c.title.toLowerCase().includes(search.toLowerCase()) || c.category.toLowerCase().includes(search.toLowerCase());
     return catOk && searchOk;
   });
+  const enrolledCourses = Object.values(courseProgress);
+  const coursesInProgress = enrolledCourses.filter(({ completed, lessons }) => lessons === 0 || completed < lessons).length;
+  const availableCourses = COURSES.length;
+  const topThreeIds = [...COURSES].sort((a, b) => b.students - a.students || a.id - b.id).slice(0, 3).map(course => course.id);
+  const catalogCourses = [...filtered].sort((a, b) => {
+    const rankA = topThreeIds.indexOf(a.id);
+    const rankB = topThreeIds.indexOf(b.id);
+    if (rankA !== -1 || rankB !== -1) return (rankA === -1 ? 99 : rankA) - (rankB === -1 ? 99 : rankB);
+    return a.id - b.id;
+  });
 
+  if (view !== "home") return <Workspace />;
   return (
-    <div className="min-h-screen" style={{ background: "#0b1929" }}>
-
-      {/* Toast */}
-      {toast && (
-        <div role="status" className="fixed top-6 right-6 z-50 bg-[#EBC302] text-[#140E0C] px-5 py-3 rounded-2xl shadow-2xl font-semibold text-sm flex items-center gap-3 fade-in-up">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          {toast}
-        </div>
-      )}
+    <div className="min-h-screen" style={{ background: "linear-gradient(160deg, #173D6E 0%, #1B3669 55%, #131739 100%)" }}>
 
       {/* ── NAV ── */}
       <nav className="fixed top-0 left-0 right-0 z-40 nav-blur border-b border-white/8" style={{ background: "rgba(11,25,41,0.9)" }}>
@@ -333,12 +305,7 @@ export default function App() {
 
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <img onError={e => { if (!e.currentTarget.src.endsWith(logoCoovitel)) e.currentTarget.src = logoCoovitel; }} src={logoCoovitel} alt="Coovitel" className="h-8 brightness-0 invert" />
-            <div className="h-5 w-px bg-white/20" />
-            <div className="leading-none">
-              <span className="font-['Outfit'] font-extrabold text-white text-base">Coovi</span>
-              <span className="font-['Outfit'] font-extrabold text-[#EBC302] text-base">Academy</span>
-            </div>
+            <AcademyLogo />
           </div>
 
           <div className="hidden md:flex items-center gap-6 text-white/60 text-sm">
@@ -352,13 +319,13 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
                   <div className="w-6 h-6 rounded-full bg-[#EBC302] flex items-center justify-center text-[#140E0C] text-xs font-bold">A</div>
-                  <span className="text-white text-sm font-medium hidden sm:block">Cuenta Coovitel</span>
+                  <button onClick={() => navigate("dashboard")} className="text-white text-sm font-medium">Mis cursos</button>
                 </div>
-                <button onClick={async () => { await api("/auth/logout", "POST", {}); setUser(null); }} className="text-white/35 text-xs hover:text-white/60 transition-colors">Salir</button>
+                <button onClick={logout} className="text-white/35 text-xs hover:text-white/60 transition-colors">Salir</button>
               </div>
             ) : (
               <>
-                <button onClick={() => setLoginOpen(true)} className="hidden md:block text-white/60 text-sm hover:text-white transition-colors">
+                <button onClick={openLogin} className="hidden md:block text-white/60 text-sm hover:text-white transition-colors">
                   Iniciar sesión
                 </button>
                 <button onClick={handleJoin} className="bg-[#EBC302] text-[#140E0C] text-sm font-bold px-4 py-2 rounded-full hover:bg-yellow-300 transition-colors">
@@ -376,173 +343,28 @@ export default function App() {
             {["Cursos", "Rutas", "En vivo", "Instructores"].map(item => (
               <a key={item} href={`#${item.toLowerCase().replace(" ", "")}`} onClick={() => setMobileMenuOpen(false)}>{item}</a>
             ))}
-            {!isMember && <button onClick={() => { setLoginOpen(true); setMobileMenuOpen(false); }} className="text-left text-[#EBC302]">Iniciar sesión</button>}
+            {!isMember && <button onClick={() => { openLogin(); setMobileMenuOpen(false); }} className="text-left text-[#EBC302]">Iniciar sesión</button>}
           </div>
         )}
       </nav>
 
-      {/* ── HERO ── */}
-      <section className="relative pt-16 overflow-hidden">
-        <div className="absolute inset-0" style={{ background: "linear-gradient(135deg, #0b1929 0%, #173D6E 55%, #1B65A6 100%)" }} />
-        {/* Mesh orbs */}
-        <div className="absolute top-20 right-1/4 w-96 h-96 rounded-full opacity-20 blur-3xl" style={{ background: "radial-gradient(circle, #1B65A6, transparent)" }} />
-        <div className="absolute bottom-10 left-1/3 w-64 h-64 rounded-full opacity-15 blur-3xl" style={{ background: "radial-gradient(circle, #EBC302, transparent)" }} />
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E\")" }} />
-
-        <div className="relative max-w-7xl mx-auto px-5 pt-16 pb-28 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 border border-[#EBC302]/40 bg-[#EBC302]/10 text-[#EBC302] text-xs font-bold px-3 py-1.5 rounded-full mb-6 uppercase tracking-wider">
-              ✦ Coovitel · Educación financiera cooperativa
-            </div>
-            <h1 className="font-['Outfit'] font-extrabold text-4xl md:text-5xl lg:text-[3.5rem] text-white leading-[1.08] mb-5">
-              El conocimiento<br />que hace crecer<br /><span className="text-[#EBC302]">tu patrimonio</span>
-            </h1>
-            <p className="text-white/55 text-lg mb-8 max-w-md leading-relaxed">
-              Cursos de educación financiera diseñados por expertos de la cooperativa. Exclusivos para asociados Coovitel, sin costo adicional.
-            </p>
-
-            {/* Search */}
-            <div className="relative mb-8 max-w-md">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input
-                type="text"
-                aria-label="Buscar cursos" placeholder="Busca un curso..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="search-input w-full pl-10 pr-4 py-3 rounded-2xl border border-white/15 bg-white/8 text-white placeholder-white/30 text-sm focus:outline-none focus:border-[#EBC302]/50"
-              />
-            </div>
-
-            <div className="flex flex-wrap gap-3 mb-10">
-              <a href="#cursos" className="bg-[#EBC302] text-[#140E0C] font-bold px-6 py-3 rounded-full hover:bg-yellow-300 transition-colors flex items-center gap-2">
-                Explorar cursos
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-              </a>
-              {!isMember && (
-                <button onClick={handleJoin} className="border border-white/25 text-white font-semibold px-6 py-3 rounded-full hover:border-white/50 hover:bg-white/5 transition-all">
-                  Quiero asociarme
-                </button>
-              )}
-            </div>
-
-            <div className="flex gap-8">
-              {[
-                { value: "17.000+", label: "Asociados activos" },
-                { value: `${COURSES.length}`, label: "Cursos" },
-                { value: "64+", label: "Años de confianza" },
-              ].map(stat => (
-                <div key={stat.label} className="border-l border-white/15 pl-5 first:border-0 first:pl-0">
-                  <p className="font-['Outfit'] font-extrabold text-2xl text-[#EBC302]">{stat.value}</p>
-                  <p className="text-white/45 text-xs">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Floating UI cards */}
-          <div className="relative hidden md:block h-[440px]">
-
-            {/* Main course card — top right, floats */}
-            <div className="absolute top-0 right-0 w-[270px] rounded-2xl overflow-hidden shadow-2xl glass-card float-a">
-              <div className="relative overflow-hidden h-36">
-                <img onError={e => { if (!e.currentTarget.src.endsWith(logoCoovitel)) e.currentTarget.src = logoCoovitel; }} src={COURSES[0].image} alt="Course" className="w-full h-full object-cover brightness-75 transition-transform duration-500 hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b1929]/80 to-transparent" />
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-[#EBC302] text-[#140E0C] text-[10px] font-bold px-2.5 py-1 rounded-full shadow">
-                  ★ Más popular
-                </div>
-                <div className="absolute top-3 right-3 bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded-full">Gratis</div>
-              </div>
-              <div className="p-4">
-                <p className="text-white font-bold text-sm font-['Outfit'] leading-snug mb-3">Fundamentos del Ahorro Inteligente</p>
-                <div className="flex items-center justify-between mb-3">
-                  <Stars rating={4.9} />
-                  <span className="text-white/40 text-xs">1.240 alumnos</span>
-                </div>
-                <button onClick={() => setSelectedCourse(COURSES[0])} className="w-full py-2 rounded-lg bg-[#EBC302] text-[#140E0C] font-bold text-xs hover:bg-yellow-300 transition-all hover:shadow-lg hover:shadow-[#EBC302]/30 hover:-translate-y-0.5">
-                  Comenzar gratis →
-                </button>
-              </div>
-            </div>
-
-            {/* Progress card — bottom left, floats slower */}
-            <div className="absolute bottom-4 left-2 rounded-2xl p-4 w-54 shadow-2xl glass-card float-b" style={{ width: "215px" }}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-full bg-[#EBC302] flex items-center justify-center text-[#140E0C] text-xs font-bold flex-shrink-0">A</div>
-                <div>
-                  <p className="text-white text-xs font-semibold leading-none">María López</p>
-                  <p className="text-white/40 text-[10px]">Asociada activa</p>
-                </div>
-              </div>
-              <p className="text-white/45 text-[10px] uppercase tracking-wider mb-1">Progreso actual</p>
-              <p className="text-white font-bold text-xs font-['Outfit'] mb-2.5 leading-snug">Plan Financiero Personal en 90 Días</p>
-              <div className="flex justify-between text-[10px] text-white/40 mb-1.5"><span>Completado</span><span className="text-[#EBC302] font-bold">65%</span></div>
-              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                <div className="h-full rounded-full progress-bar" style={{ width: "65%" }} />
-              </div>
-              <p className="text-white/30 text-[10px] mt-2">3 lecciones restantes</p>
-            </div>
-
-            {/* A+ badge — middle left, floats different phase */}
-            <div className="absolute top-36 left-8 rounded-2xl p-4 shadow-xl glass-card float-c" style={{ width: "152px", background: "rgba(235,195,2,0.1)", borderColor: "rgba(235,195,2,0.25)" }}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-full bg-[#EBC302]/20 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-[#EBC302]" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                </div>
-                <p className="text-[#EBC302] font-extrabold text-xl font-['Outfit'] leading-none">A+</p>
-              </div>
-              <p className="text-white/70 text-[11px] font-semibold leading-tight">Calificación Coovitel</p>
-              <p className="text-white/35 text-[10px] mt-1">Value & Risk · 2026</p>
-            </div>
-
-            {/* Live pill — top left */}
-            <div className="absolute top-2 left-10 rounded-full flex items-center gap-2 shadow-xl float-b" style={{ background: "rgba(239,68,68,0.18)", backdropFilter: "blur(12px)", border: "1px solid rgba(239,68,68,0.35)", padding: "8px 14px" }}>
-              <span className="relative flex w-2 h-2">
-                <span className="live-ring absolute inline-flex w-full h-full rounded-full" />
-                <span className="relative inline-flex w-2 h-2 rounded-full bg-red-400" />
-              </span>
-              <span className="text-red-200 text-xs font-bold tracking-wide">En vivo ahora</span>
-              <span className="bg-red-500/30 text-red-200 text-[9px] font-bold px-1.5 py-0.5 rounded-full">142</span>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Ticker */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/8 py-3 overflow-hidden" style={{ background: "rgba(23,61,110,0.5)", backdropFilter: "blur(8px)" }}>
-          <div className="flex gap-12 whitespace-nowrap animate-[ticker_30s_linear_infinite]">
-            {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
-              <span key={i} className="text-white/50 text-xs font-medium tracking-wide">{item}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MEMBER ALERT ── */}
-      {!isMember && (
-        <div className="max-w-7xl mx-auto px-5 mt-6 mb-4">
-          <div className="rounded-2xl border border-[#EBC302]/25 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: "linear-gradient(90deg, rgba(235,195,2,0.08) 0%, rgba(27,101,166,0.12) 100%)" }}>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#EBC302]/15 flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-[#EBC302]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              </div>
-              <p className="text-white/70 text-sm"><span className="text-white font-semibold">Vista previa: </span>Los cursos con candado son exclusivos para asociados de Coovitel.</p>
-            </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button onClick={() => setLoginOpen(true)} className="text-xs text-white/55 border border-white/15 px-3 py-1.5 rounded-full hover:border-white/30 transition-colors">Iniciar sesión</button>
-              <button onClick={handleJoin} className="text-xs font-bold bg-[#EBC302] text-[#140E0C] px-3 py-1.5 rounded-full hover:bg-yellow-300 transition-colors">Asóciate →</button>
-            </div>
-          </div>
-        </div>
-      )}
-
+      <HomeHero courses={enrollmentsLoaded ? COURSES : COURSES.map(course => ({ ...course, students: 0 }))} isMember={isMember} onLogin={openLogin}
+        onPreview={setSelectedCourse} onCategory={category => {
+          setActiveCategory(category); setSearch('');
+          document.getElementById('cursos')?.scrollIntoView({ behavior: 'smooth' });
+        }} />
       {/* ── COURSES ── */}
       <section id="cursos" className="max-w-7xl mx-auto px-5 py-10">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
           <div>
             <p className="text-[#81A1DB] text-xs font-bold uppercase tracking-widest mb-2">Catálogo</p>
-            <h2 className="font-['Outfit'] font-bold text-3xl text-white">{isMember ? "Tu biblioteca de cursos" : "Explora nuestros cursos"}</h2>
+            <h2 className="font-['Outfit'] font-bold text-3xl text-white">Catálogo de cursos</h2>
           </div>
-          <div id="categorias" className="flex flex-wrap gap-2">
+          <label className="home-catalog-search">Buscar en el catálogo
+            <input type="search" placeholder="Ahorro, crédito, inversión…" value={search} onChange={e => setSearch(e.target.value)} />
+          </label>
+        </div>
+          <div id="categorias" className="flex flex-wrap gap-2 mb-8">
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 className={`cat-pill px-4 py-1.5 rounded-full text-sm font-medium ${activeCategory === cat ? "active bg-[#EBC302] text-[#140E0C]" : "border border-white/12 text-white/55 hover:border-white/30 hover:text-white"}`}>
@@ -550,8 +372,6 @@ export default function App() {
               </button>
             ))}
           </div>
-        </div>
-
         {filtered.length === 0 ? (
           <div className="text-center py-16 text-white/30">
             <p className="text-4xl mb-3">🔍</p>
@@ -560,8 +380,9 @@ export default function App() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map(course => (
-              <CourseCard key={course.id} course={course} isMember={isMember} onPreview={setSelectedCourse} />
+            {catalogCourses.map(course => (
+              <CourseCard key={course.id} course={course} isMember={isMember} onPreview={setSelectedCourse}
+                topRank={topThreeIds.indexOf(course.id) === -1 ? undefined : topThreeIds.indexOf(course.id) + 1} />
             ))}
           </div>
         )}
@@ -572,106 +393,62 @@ export default function App() {
         <div className="mb-8">
           <p className="text-[#81A1DB] text-xs font-bold uppercase tracking-widest mb-2">Rutas de aprendizaje</p>
           <h2 className="font-['Outfit'] font-bold text-3xl text-white">Aprende con propósito</h2>
-          <p className="text-white/45 mt-2 max-w-xl">Cursos agrupados en secuencia lógica para que avances paso a paso hacia tus metas financieras.</p>
+          <p className="text-white/45 mt-2 max-w-xl">Elige una ruta, empieza por el curso 1 y avanza en orden. Cuando el profesor aprueba el curso actual, el siguiente se desbloquea y se inscribe automáticamente.</p>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
-          {LEARNING_PATHS.map(path => (
-            <div key={path.id} className="path-card shimmer-card rounded-2xl p-6 border border-white/10 cursor-pointer relative overflow-hidden"
-              style={{ background: `linear-gradient(135deg, ${path.color} 0%, #0b1929 100%)` }}>
+          {learningPaths.map(path => (
+            (() => {
+              const rawSteps = path.courseIds.map((id, index) => ({ id, course: path.courses.find(course => course.id === id) || COURSES.find(course => course.id === id), title: path.courses[index]?.title || `Curso ${index + 1}`, progress: courseProgress[id] }));
+              const steps = rawSteps.map((step, index) => ({ ...step, done: Boolean(step.progress && step.progress.lessons > 0 && step.progress.completed >= step.progress.lessons), locked: index > 0 && !rawSteps[index - 1].progress ? true : index > 0 && !(rawSteps[index - 1].progress && rawSteps[index - 1].progress.lessons > 0 && rawSteps[index - 1].progress.completed >= rawSteps[index - 1].progress.lessons) }));
+              const completed = steps.filter(step => step.done).length;
+              const target = steps.find(step => !step.done && !step.locked) || steps[steps.length - 1];
+              return <div key={path.id} className="path-card shimmer-card rounded-2xl p-6 border border-white/10 relative overflow-hidden"
+              style={{ background: `linear-gradient(135deg, ${path.color} 0%, #1B3669 55%, #131739 100%)` }}>
               <div className="path-orb absolute top-0 right-0 w-32 h-32 rounded-full opacity-10 blur-2xl" style={{ background: path.accent }} />
               <div className="relative">
                 <p className="text-4xl mb-4">{path.icon}</p>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full mb-3 inline-block ${LEVEL_COLORS[path.level]}`}>{path.level}</span>
                 <h3 className="font-['Outfit'] font-bold text-xl text-white mb-2">{path.title}</h3>
                 <p className="text-white/50 text-sm mb-4 leading-relaxed">{path.description}</p>
+                <div className="path-progress-head"><span>{isMember ? `${completed} de ${steps.length} cursos aprobados` : `${steps.length} cursos en secuencia`}</span><strong>{isMember ? `${Math.round(completed / steps.length * 100)}%` : 'Paso a paso'}</strong></div>
+                <div className="path-progress-track"><span style={{ width: `${isMember ? completed / steps.length * 100 : 0}%`, background: path.accent }} /></div>
                 <div className="space-y-2 mb-5">
-                  {path.courses.map((c, i) => (
-                    <div key={i} className="flex items-center gap-2 text-white/60 text-xs">
-                      <div className="w-4 h-4 rounded-full border border-white/20 flex items-center justify-center text-[10px] font-bold" style={{ color: path.accent, borderColor: path.accent + "50" }}>{i+1}</div>
-                      {c}
+                  {steps.map((step, i) => (
+                    <div key={step.id} className={`path-step ${step.done ? 'is-done' : ''} ${step.locked ? 'is-locked' : ''}`}>
+                      <div className="path-step-dot" style={{ color: step.done ? '#140E0C' : path.accent, background: step.done ? path.accent : undefined, borderColor: path.accent + '70' }}>{step.done ? '✓' : step.locked ? '🔒' : i + 1}</div>
+                      <div className="min-w-0"><span>{step.course?.title || step.title}</span><small>{step.done ? 'Curso aprobado' : step.locked ? 'Completa el curso anterior para desbloquearlo' : step.progress ? `${Math.round((step.progress.completed / Math.max(step.progress.lessons, 1)) * 100)}% en progreso` : 'Disponible para comenzar'}</small></div>
                     </div>
                   ))}
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-white/40 text-xs">{path.duration}</span>
-                  {isMember ? (
-                    <button onClick={() => setSelectedCourse(COURSES.find(c => c.title === path.courses[0]) || COURSES[0])} className="text-xs font-bold px-3 py-1.5 rounded-full transition-colors" style={{ background: path.accent, color: "#140E0C" }}>Iniciar ruta →</button>
+                  {isMember && target?.course ? (
+                    <button onClick={() => void startCourse(target.course!)} className="text-xs font-bold px-3 py-1.5 rounded-full transition-colors" style={{ background: path.accent, color: "#140E0C" }}>{completed === steps.length ? 'Ver ruta →' : target.progress ? 'Continuar ruta →' : 'Iniciar ruta →'}</button>
                   ) : (
-                    <button onClick={handleJoin} className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors border-white/20 text-white/60 hover:border-white/40">
-                      Para asociados
+                    <button onClick={openLogin} className="text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors border-white/20 text-white/60 hover:border-white/40">
+                      Iniciar sesión
                     </button>
                   )}
                 </div>
               </div>
-            </div>
+            </div>;
+            })()
           ))}
         </div>
       </section>
 
-      {/* ── LIVE SESSIONS ── */}
-      <section id="envivo" className="max-w-7xl mx-auto px-5 py-12">
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div>
-            <p className="text-[#81A1DB] text-xs font-bold uppercase tracking-widest mb-2">Próximas sesiones</p>
-            <h2 className="font-['Outfit'] font-bold text-3xl text-white flex items-center gap-3">
-              En vivo
-              <span className="flex items-center gap-1.5 text-sm font-medium text-red-400 border border-red-500/30 bg-red-500/10 px-2.5 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                Live
-              </span>
-            </h2>
-          </div>
-          <button onClick={() => showToast("Estas son las sesiones de ejemplo incluidas en el diseño.")} className="text-[#81A1DB] text-sm hover:text-white transition-colors">Ver calendario completo →</button>
-        </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {LIVE_SESSIONS.map(session => {
-            const pct = Math.round((session.attendees / session.max) * 100);
-            return (
-              <div key={session.id} className="live-card shimmer-card rounded-2xl p-5 border border-white/8" style={{ background: "linear-gradient(160deg, #1A2842 0%, #0e1929 100%)" }}>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-500/15 text-red-300 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-                    {session.category}
-                  </span>
-                  <span className="text-white/35 text-xs">{session.date} · {session.time}</span>
-                </div>
-                <h3 className="font-['Outfit'] font-bold text-white text-base leading-snug mb-2">{session.title}</h3>
-                <p className="text-white/40 text-sm mb-4">{session.instructor}</p>
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs text-white/40 mb-1.5">
-                    <span>{session.attendees} registrados</span>
-                    <span>{session.max - session.attendees} cupos libres</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: pct > 80 ? "#EBC302" : "#27548F" }} />
-                  </div>
-                </div>
-                {isMember ? (
-                  <button onClick={() => showToast("La inscripción a sesiones estará disponible al conectar la plataforma real.")} className="w-full py-2 rounded-xl bg-[#27548F] text-white font-semibold text-sm hover:bg-[#1B65A6] transition-colors border border-[#81A1DB]/20">
-                    Reservar lugar
-                  </button>
-                ) : (
-                  <button onClick={handleJoin} className="w-full py-2 rounded-xl border border-white/12 text-white/50 text-sm hover:border-white/25 transition-colors flex items-center justify-center gap-2">
-                    <LockIcon size={4} />
-                    Solo asociados
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <section id="envivo" className="max-w-7xl mx-auto px-5 py-12"><EventsPage compact /></section>
 
       {/* ── INSTRUCTORS ── */}
       <section id="instructores" className="max-w-7xl mx-auto px-5 py-12">
         <div className="mb-8">
           <p className="text-[#81A1DB] text-xs font-bold uppercase tracking-widest mb-2">Nuestro equipo</p>
-          <h2 className="font-['Outfit'] font-bold text-3xl text-white">Aprende de los mejores</h2>
-          <p className="text-white/45 mt-2 max-w-xl">Profesionales certificados con años de experiencia en finanzas cooperativas, inversiones y planificación patrimonial.</p>
+          <h2 className="font-['Outfit'] font-bold text-3xl text-white">Instructores de CooviAcademy</h2>
+          <p className="text-white/45 mt-2 max-w-xl">Consulta el equipo docente asignado a los cursos publicados y sus áreas de experiencia.</p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {INSTRUCTORS.map(inst => (
-            <div key={inst.name} className="instructor-card shimmer-card rounded-2xl p-5 border border-white/8 text-center" style={{ background: "linear-gradient(160deg, #1A2842 0%, #0e1929 100%)" }}>
+          {instructors.map(inst => (
+            <div key={inst.name} className="instructor-card shimmer-card rounded-2xl p-5 border border-white/8 text-center" style={{ background: "linear-gradient(160deg, #173D6E 0%, #1B3669 55%, #131739 100%)" }}>
               <div className="relative inline-block mb-4">
                 <img onError={e => { if (!e.currentTarget.src.endsWith(logoCoovitel)) e.currentTarget.src = logoCoovitel; }} src={inst.avatar} alt={inst.name} className="inst-avatar w-20 h-20 rounded-2xl object-cover mx-auto ring-2 ring-white/10" />
                 <div className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-[#EBC302] flex items-center justify-center text-[#140E0C] text-xs font-bold border-2 border-[#1A2842]">
@@ -699,60 +476,17 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── BENEFITS / CTA ── */}
-      {!isMember && (
-        <section id="beneficios" className="max-w-7xl mx-auto px-5 py-12">
-          <div className="rounded-3xl overflow-hidden relative" style={{ background: "linear-gradient(135deg, #173D6E 0%, #27548F 50%, #1B3669 100%)" }}>
-            <div className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: "radial-gradient(circle, #EBC302, transparent)" }} />
-            <div className="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10 blur-3xl" style={{ background: "radial-gradient(circle, #A90072, transparent)" }} />
-            <div className="relative p-8 md:p-12">
-              <div className="max-w-2xl mb-10">
-                <p className="text-[#EBC302] text-xs font-bold uppercase tracking-widest mb-3">¿Por qué asociarte?</p>
-                <h2 className="font-['Outfit'] font-bold text-3xl md:text-4xl text-white mb-4">
-                  Más que cursos,<br />un camino al bienestar
-                </h2>
-                <p className="text-white/55 leading-relaxed">
-                  Como asociado de Coovitel tienes acceso ilimitado a todos los cursos, rutas de aprendizaje, sesiones en vivo, certificaciones y recursos de CooviAcademy — todo sin costo adicional.
-                </p>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                {[
-                  { icon: "🎓", title: "Acceso ilimitado", desc: "Todos los cursos sin costo adicional como asociado" },
-                  { icon: "📜", title: "Certificaciones", desc: "Certificados avalados por Coovitel y sus aliados" },
-                  { icon: "📡", title: "Sesiones en vivo", desc: "Talleres y webinars con expertos cada semana" },
-                  { icon: "📱", title: "Aprende donde sea", desc: "Accede desde móvil, tablet o computador" },
-                ].map(b => (
-                  <div key={b.title} className="rounded-2xl bg-white/5 border border-white/10 p-5 hover:bg-white/8 transition-colors">
-                    <p className="text-3xl mb-3">{b.icon}</p>
-                    <p className="text-white font-bold text-sm font-['Outfit'] mb-1">{b.title}</p>
-                    <p className="text-white/45 text-xs leading-relaxed">{b.desc}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-4 items-center">
-                <button onClick={handleJoin} className="bg-[#EBC302] text-[#140E0C] font-bold px-8 py-3.5 rounded-full text-base hover:bg-yellow-300 transition-colors gold-glow">
-                  Asóciate hoy →
-                </button>
-                <button onClick={() => setLoginOpen(true)} className="border border-white/25 text-white font-semibold px-6 py-3.5 rounded-full hover:border-white/50 transition-colors text-base">
-                  Iniciar sesión
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── MEMBER DASHBOARD PREVIEW ── */}
       {isMember && (
         <section className="max-w-7xl mx-auto px-5 py-12">
-          <div className="rounded-3xl p-8 md:p-10 border border-white/8" style={{ background: "linear-gradient(135deg, #173D6E 0%, #0b1929 100%)" }}>
+          <div className="rounded-3xl p-8 md:p-10 border border-white/8" style={{ background: "linear-gradient(135deg, #173D6E 0%, #1B3669 55%, #131739 100%)" }}>
             <p className="text-[#81A1DB] text-xs font-bold uppercase tracking-widest mb-2">Tu progreso</p>
-            <h2 className="font-['Outfit'] font-bold text-2xl text-white mb-6">Bienvenido de vuelta, Asociado</h2>
+            <h2 className="font-['Outfit'] font-bold text-2xl text-white mb-6">Bienvenido de vuelta, {user?.name.split(' ')[0] || 'asociado'}</h2>
             <div className="grid sm:grid-cols-3 gap-5">
               {[
-                { label: "Cursos en progreso", value: "2", sub: "de 9 disponibles", color: "#EBC302" },
-                { label: "Horas estudiadas", value: "14h", sub: "este mes", color: "#81A1DB" },
-                { label: "Certificados obtenidos", value: "1", sub: "ver mis logros", color: "#A90072" },
+                { label: "Cursos en progreso", value: String(coursesInProgress), sub: `de ${availableCourses} disponibles`, color: "#EBC302" },
+                { label: "Cursos inscritos", value: String(enrolledCourses.length), sub: "ver en Mis cursos", color: "#81A1DB" },
+                { label: "Constancias obtenidas", value: String(dashboardCertificates), sub: dashboardCertificates ? "disponibles en Mis cursos" : "completa un curso para obtenerla", color: "#A90072" },
               ].map(m => (
                 <div key={m.label} className="rounded-2xl p-5 bg-white/5 border border-white/8">
                   <p className="font-['Outfit'] font-extrabold text-3xl mb-1" style={{ color: m.color }}>{m.value}</p>
@@ -766,76 +500,43 @@ export default function App() {
       )}
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/8 py-10 mt-4" style={{ background: "#080f1a" }}>
+      <footer
+        className="academy-footer border-t border-white/15 py-10 mt-4"
+        style={{ background: "linear-gradient(160deg, #173D6E 0%, #1B3669 55%, #131739 100%)" }}
+      >
         <div className="max-w-7xl mx-auto px-5">
           <div className="grid sm:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <img onError={e => { if (!e.currentTarget.src.endsWith(logoCoovitel)) e.currentTarget.src = logoCoovitel; }} src={logoCoovitel} alt="Coovitel" className="h-7 brightness-0 invert opacity-70" />
-                <div className="h-4 w-px bg-white/15" />
-                <span className="font-['Outfit'] font-extrabold text-white text-sm">Coovi<span className="text-[#EBC302]">Academy</span></span>
+                <AcademyLogo />
               </div>
-              <p className="text-white/35 text-xs leading-relaxed">Plataforma de educación financiera cooperativa. Exclusiva para asociados Coovitel.</p>
+              <p className="text-[#C9DCFF] text-xs leading-relaxed">Plataforma de educación financiera cooperativa. Exclusiva para asociados Coovitel.</p>
             </div>
             <div>
-              <p className="text-white/60 font-semibold text-sm mb-3">Categorías</p>
+              <p className="text-[#F7F0FF] font-semibold text-sm mb-3">Categorías</p>
               <div className="flex flex-col gap-2">
                 {CATEGORIES.filter(c => c !== "Todos").map(cat => (
                   <button key={cat} onClick={() => { setActiveCategory(cat); document.getElementById("cursos")?.scrollIntoView({ behavior: "smooth" }); }}
-                    className="text-white/35 text-xs hover:text-white/70 text-left transition-colors">{cat}</button>
+                    className="footer-link text-[#C9DCFF] text-xs hover:text-white text-left transition-colors">{cat}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="text-white/60 font-semibold text-sm mb-3">Coovitel</p>
+              <p className="text-[#F7F0FF] font-semibold text-sm mb-3">Coovitel</p>
               <div className="flex flex-col gap-2">
                 {["Cooperativa", "Productos", "Oficina Virtual", "Contacto", "Política de privacidad"].map(l => (
-                  <button key={l} onClick={() => showToast("Sección pendiente de configurar con Coovitel.")} className="footer-link text-white/35 text-xs text-left">{l}</button>
+                  <button key={l} onClick={handleJoin} className="footer-link text-[#C9DCFF] text-xs text-left">{l}</button>
                 ))}
               </div>
             </div>
           </div>
-          <div className="border-t border-white/8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-white/25 text-xs">© 2026 CooviAcademy · Cooperativa Empresarial de Ahorro y Crédito Coovitel</p>
-            <p className="text-white/20 text-xs">Vigilada Supersolidaria · Colombia</p>
+          <div className="border-t border-[#C9DCFF]/20 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-[#C9DCFF]/80 text-xs">© 2026 CooviAcademy · Cooperativa Empresarial de Ahorro y Crédito Coovitel</p>
+            <p className="text-[#C9DCFF]/70 text-xs">Vigilada Supersolidaria · Colombia</p>
           </div>
         </div>
       </footer>
 
-      {loginOpen && <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4" onClick={() => setLoginOpen(false)}>
-        <form aria-label="Inicio de sesión" className="w-full max-w-md rounded-2xl border border-white/20 bg-[#0b1929] p-6 space-y-4" onSubmit={handleLogin} onClick={e => e.stopPropagation()}>
-          <div className="flex justify-between items-center"><h2 className="text-2xl font-bold">Iniciar sesión</h2><button type="button" aria-label="Cerrar" onClick={() => setLoginOpen(false)}>✕</button></div>
-          <p className="text-sm text-white/60">Usa las mismas credenciales de tu oficina virtual Coovitel.</p>
-          <label className="block text-sm">Usuario<input required name="username" autoComplete="username" className="mt-2 block w-full rounded-lg border border-white/20 bg-white/5 p-3" /></label>
-          <label className="block text-sm">Contraseña<input required name="password" type="password" autoComplete="current-password" className="mt-2 block w-full rounded-lg border border-white/20 bg-white/5 p-3" /></label>
-          {loginError && <p role="alert" className="text-red-300 text-sm">{loginError}</p>}
-          <button className="w-full bg-[#EBC302] text-[#140E0C] rounded-xl py-3 font-bold">Entrar y habilitar cursos</button>
-          <a href="https://coovitel.coop/" target="_blank" rel="noopener noreferrer" className="block text-center text-[#81A1DB] text-sm hover:underline">¿Necesitas recuperar tu acceso? Ir a coovitel.coop</a>
-        </form>
-      </div>}
-      {joinOpen && <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4" onClick={() => !saving && setJoinOpen(false)}>
-        <section role="dialog" aria-modal="true" aria-labelledby="join-title" className="w-full max-w-md rounded-2xl border border-white/20 bg-[#0b1929] p-6" onClick={e => e.stopPropagation()} onKeyDown={e => { if (e.key === 'Escape' && !saving) setJoinOpen(false); }}>
-          <div className="flex justify-between items-center mb-4"><h2 id="join-title" className="text-2xl font-bold">Quiero asociarme</h2><button aria-label="Cerrar" disabled={saving} onClick={() => setJoinOpen(false)}>✕</button></div>
-          <p className="text-sm text-white/60 mb-5">La afiliación se gestiona directamente en coovitel.coop.</p>
-          <form className="space-y-4" onSubmit={async e => {
-            e.preventDefault(); setSaving(true); setFormError("");
-            const form = new FormData(e.currentTarget);
-            try {
-              const response = await fetch('/api/membership-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: form.get('name'), email: form.get('email'), consent: form.get('consent') === 'on' }) });
-              const result = await response.json();
-              if (!response.ok) throw new Error(result.error || 'No se pudo guardar la solicitud.');
-              setJoinOpen(false); showToast('La afiliación se gestiona en coovitel.coop.');
-            } catch (error) { setFormError(error instanceof Error ? error.message : 'Revisa la conexión e inténtalo otra vez.'); }
-            finally { setSaving(false); }
-          }}>
-            <label className="block text-sm">Nombre<input autoFocus required name="name" maxLength={100} className="mt-2 block w-full rounded-lg border border-white/20 bg-white/5 p-3" /></label>
-            <label className="block text-sm">Correo electrónico<input required type="email" name="email" maxLength={254} className="mt-2 block w-full rounded-lg border border-white/20 bg-white/5 p-3" /></label>
-            <label className="flex gap-2 text-xs text-white/70"><input required type="checkbox" name="consent" />Acepto continuar en coovitel.coop.</label>
-            {formError && <p role="alert" className="text-red-300 text-sm">{formError}</p>}
-            <button disabled={saving} className="w-full bg-[#EBC302] text-[#140E0C] rounded-xl py-3 font-bold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar solicitud'}</button>
-          </form>
-        </section>
-      </div>}
       {/* Modal */}
       {selectedCourse && (
         <Modal
@@ -843,9 +544,11 @@ export default function App() {
           isMember={isMember}
           onClose={() => setSelectedCourse(null)}
           onJoin={handleJoin}
+          onStart={() => { setSelectedCourse(null); void startCourse(selectedCourse); }}
         />
       )}
     </div>
   );
 }
+
 

@@ -7,10 +7,13 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "node scripts/dev.js",
+    "dev": "node --env-file-if-exists=.env scripts/dev.js",
     "build": "tsc --noEmit && vite build --configLoader native",
-    "start": "node server/index.js",
-    "test": "node --test --test-isolation=none server/*.test.js"
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && node --check server/index.js && node --check server/db.js",
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "setup:test": "node scripts/setup-test.js",
+    "test": "node --test --test-isolation=none server/*.test.js tests/*.test.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

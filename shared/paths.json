@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "title": "Ruta del Ahorrador",
+    "color": "#27548F",
+    "accent": "#81A1DB",
+    "icon": "💰",
+    "description": "Desde tus primeros pesos ahorrados hasta un fondo de emergencia robusto.",
+    "courseIds": [1, 7],
+    "duration": "7h 15min",
+    "level": "Principiante"
+  },
+  {
+    "id": 2,
+    "title": "Ruta del Inversor",
+    "color": "#1B3669",
+    "accent": "#EBC302",
+    "icon": "📈",
+    "description": "Aprende a invertir con cabeza y construir un portafolio equilibrado.",
+    "courseIds": [2, 5],
+    "duration": "11h 35min",
+    "level": "Intermedio"
+  },
+  {
+    "id": 3,
+    "title": "Ruta del Planificador",
+    "color": "#800080",
+    "accent": "#A90072",
+    "icon": "🗺️",
+    "description": "De las finanzas del presente a la seguridad del futuro, paso a paso.",
+    "courseIds": [4, 9],
+    "duration": "14h 30min",
+    "level": "Avanzado"
+  }
+]

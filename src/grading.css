@@ -1,0 +1,96 @@
+.grading-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.grading-student { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.grading-avatar { display: grid; place-items: center; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px; background: #EBC302; color: #140E0C; font-weight: 700; }
+.grading-student > div { min-width: 0; display: grid; gap: 5px; }
+.grading-student strong { color: #f7f0ff; font-size: 14px; font-weight: 600; }
+.grading-student div > span { color: #C9DCFF; font-size: 12px; overflow-wrap: anywhere; }
+.grading-roster { margin-top: 22px; }
+.grading-roster th { font-size: 12px; }
+.grading-roster td { padding-top: 22px; padding-bottom: 22px; }
+.grading-roster th:first-child { width: 32%; }
+.grading-evidence-summary, .grading-result-summary { display: grid; gap: 7px; justify-items: start; }
+.grading-evidence-summary strong { font-size: 13px; font-weight: 500; }
+.grading-evidence-summary time, .grading-evidence-summary > span { color: #C9DCFF; font-size: 12px; }
+.grading-status { display: inline-flex; align-items: center; width: fit-content; border: 1px solid #81A1DB50; border-radius: 99px; background: #1A2842; color: #CFE0FF; padding: 6px 10px; font-size: 11px; font-weight: 500; line-height: 1.4; }
+.grading-result-summary > strong { font-family: Outfit,sans-serif; font-size: 21px; }
+.grading-result-summary small { font-size: 12px; color: #C9DCFF; font-weight: 400; }
+.grading-result-summary .grading-draft { color: #EBC302; }
+.grading-open { font-size: 12px; white-space: nowrap; gap: 14px; background: #1A2842; }
+.grading-dialog.academy-dialog { width: min(1120px, calc(100% - 40px)); padding: 28px; background: linear-gradient(145deg,#27548F 0%,#1B3669 55%,#131739 100%); }
+.grading-dialog .academy-dialog-head { margin-bottom: 22px; }
+.grading-dialog h3 { font-family: Outfit,sans-serif; font-size: 22px; font-weight: 600; line-height: 1.3; }
+.grading-review-heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; padding-bottom: 22px; border-bottom: 1px solid #81A1DB40; margin-bottom: 24px; }
+.grading-review-heading > p { max-width: 48%; display: grid; gap: 6px; font-size: 12px; color: #C9DCFF; text-align: right; }
+.grading-review-heading > p strong { color: #f7f0ff; font-size: 14px; font-weight: 500; }
+.grading-review-layout { display: grid; grid-template-columns: minmax(0,1fr) 304px; gap: 28px; align-items: start; }
+.grading-answers { min-width: 0; }
+.grading-answer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.grading-answer-heading .academy-eyebrow { margin-bottom: 7px; color: #C9DCFF; }
+.grading-answer-heading .grading-status { white-space: nowrap; }
+.grading-receipt { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 22px; color: #C9DCFF; font-size: 11px; line-height: 1.6; }
+.grading-answer-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.grading-answer-list > li { border-radius: 12px; overflow: hidden; background: #f7f0ff; border: 1px solid #C9DCFF; color: #1A2842; }
+.grading-question { display: flex; align-items: flex-start; gap: 12px; padding: 17px 20px 13px; border-bottom: 1px solid #173D6E15; }
+.grading-question > span { display: grid; place-items: center; flex: 0 0 26px; height: 26px; border-radius: 7px; background: #CFE0FF; color: #173D6E; font-size: 11px; font-weight: 700; }
+.grading-question h4 { font-family: Inter,sans-serif; font-weight: 650; font-size: 14px; line-height: 1.7; color: #173D6E; overflow-wrap: anywhere; margin: 0; }
+.grading-answer-text { padding: 17px 20px 20px; margin: 0; font-size: 15px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; color: #1A2842; }
+.grading-answer-text.is-empty { color: #173D6E; font-style: italic; }
+.grading-evaluation { position: sticky; top: 0; background: #1A2842; border: 1px solid #81A1DB40; border-radius: 14px; padding: 22px; }
+.grading-grade-form { display: grid; gap: 22px; }
+.grading-grade-form .academy-eyebrow { margin-bottom: 7px; }
+.grading-grade-form h3 { margin-bottom: 6px; }
+.grading-grade-form .academy-muted { font-size: 12px; }
+.grading-grade-form > label { display: grid; gap: 9px; font-size: 13px; color: #f7f0ff; }
+.grading-grade-form small { color: #C9DCFF; font-size: 11px; line-height: 1.6; }
+.grading-score-box { display: flex; align-items: center; background: #173D6E; border: 1px solid #81A1DB70; border-radius: 10px; padding: 10px 14px; }
+.grading-score-box:focus-within { outline: 2px solid #EBC302; outline-offset: 2px; }
+.grading-score-box input { min-width: 0; width: 100%; color: #f7f0ff; font: 600 30px Outfit,sans-serif; padding: 0; background: transparent; border: 0; outline: none; }
+.grading-score-box span { flex-shrink: 0; color: #C9DCFF; font-size: 13px; }
+.grading-grade-form textarea { display: block; width: 100%; padding: 12px 14px; border: 1px solid #81A1DB70; border-radius: 10px; background: #173D6E; color: #f7f0ff; font: inherit; line-height: 1.7; resize: vertical; }
+.grading-grade-form textarea::placeholder { color: #C9DCFF; }
+.grading-grade-form textarea:focus-visible { outline: 2px solid #EBC302; outline-offset: 2px; }
+.grading-decision { padding: 0; border: 0; min-width: 0; display: grid; gap: 7px; }
+.grading-decision legend { padding: 0; font-size: 13px; margin-bottom: 10px; }
+.grading-decision label { display: flex; align-items: center; gap: 10px; cursor: pointer; border: 1px solid #81A1DB40; border-radius: 8px; padding: 11px; font-size: 12px; }
+.grading-decision input { accent-color: #EBC302; width: 16px; height: 16px; flex-shrink: 0; }
+.grading-decision label.is-selected { border-color: #EBC30299; background: #EBC3020D; color: #EBC302; }
+.grading-save-success { padding: 12px; border: 1px solid #EBC30266; border-radius: 8px; background: #EBC3020D; font-size: 12px; line-height: 1.7; color: #f7f0ff; }
+.grading-empty-evidence { border: 1px dashed #81A1DB70; border-radius: 12px; padding: 24px; }
+.grading-empty-evidence h3 { margin-bottom: 10px; }
+.grading-attachments { margin-top: 26px; }
+.grading-attachments h3 { margin-bottom: 14px; }
+.grading-attachments h3 span { font-size: 15px; color: #C9DCFF; }
+.grading-attachments article { display: grid; gap: 8px; padding: 17px; margin-top: 10px; border: 1px solid #81A1DB50; border-radius: 10px; background: #1A2842; }
+.grading-attachments a { display: flex; justify-content: space-between; gap: 10px; color: #EBC302; font-size: 14px; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 4px; }
+.grading-attachments time { color: #C9DCFF; font-size: 11px; }
+.grading-attachments p { font-size: 13px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+@media (max-width: 800px) {
+  .grading-dialog.academy-dialog { width: calc(100% - 24px); padding: 20px; max-height: calc(100dvh - 24px); }
+  .grading-review-layout { grid-template-columns: minmax(0,1fr); gap: 22px; }
+  .grading-evaluation { position: static; }
+  .grading-review-heading { align-items: flex-start; flex-direction: column; }
+  .grading-review-heading > p { max-width: 100%; text-align: left; }
+  .grading-answer-heading { flex-wrap: wrap; }
+}
+.grading-answer-mark { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 20px 18px; padding:0; border:0; }
+.grading-answer-mark legend { color:#173D6E; font-size:11px; margin-bottom:8px; }
+.grading-answer-mark label { display:flex; align-items:center; gap:8px; padding:9px 12px; border:1px solid #81A1DB; border-radius:8px; font-size:12px; cursor:pointer; color:#173D6E; }
+.grading-answer-mark input { width:15px; height:15px; accent-color:#173D6E; }
+.grading-answer-mark label.is-correct { color:#173D6E; border-color:#173D6E; background:#CFE0FF; font-weight:600; }
+.grading-answer-mark label.is-incorrect { color:#800080; border-color:#A90072; background:#A9007210; font-weight:600; }
+.grading-answer-mark label.is-incorrect input { accent-color:#A90072; }
+.grading-answer-mark small { color:#173D6E; font-size:11px; }
+.grading-automatic { display:grid; gap:12px; font-size:13px; }
+.grading-automatic p { font-size:12px; color:#C9DCFF; line-height:1.6; }
+.grading-automatic progress { width:100%; height:7px; accent-color:#EBC302; }
+.grading-score-box output { font:600 34px Outfit,sans-serif; flex:1; color:#f7f0ff; }
+@media (max-width: 620px) {
+  .grading-roster thead { display: none; }
+  .grading-roster table, .grading-roster tbody { display: block; }
+  .grading-roster tr { display: grid; gap: 15px; padding: 20px; border-bottom: 1px solid #81A1DB40; }
+  .grading-roster td { display: block; padding: 0; border: 0; }
+  .grading-roster td:last-child .grading-open { width: 100%; }
+  .grading-question { padding: 14px; gap: 9px; }
+  .grading-answer-text { padding: 14px; }
+  .grading-dialog .academy-dialog-head h2 { font-size: 23px; }
+}
